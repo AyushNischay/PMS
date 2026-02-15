@@ -26,11 +26,10 @@
 }
 
 * {
-  box-sizing: border_box;
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
-
 body {
   font-family:
     "Inter",
@@ -116,7 +115,11 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
 
-/* Buttons */
+input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -130,6 +133,11 @@ input:focus {
   font-size: 0.95rem;
 }
 
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .btn-primary {
   background-color: var(--primary);
   color: white;
@@ -140,6 +148,12 @@ input:focus {
   background-color: var(--primary-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary:hover {
+    transform: none;
+  }
 }
 
 .btn-secondary {

@@ -34,15 +34,24 @@ def sales_page():
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
+        token = None
+        # Check header first (optional, for API clients)
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split()[1]
+        
+        # Check cookie if no header
+        if not token:
+            token = request.cookies.get('access_token')
+
         if not token:
             return jsonify({'message': 'Token is missing!'}), 401
+        
         try:
-            # Token format: "Bearer <token>"
-            if token.startswith('Bearer '):
-                token = token.split()[1]
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = {'id': data['user_id'], 'role': data['role'], 'type': data.get('type')}
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired!'}), 401
         except Exception as e:
             return jsonify({'message': 'Token is invalid!', 'error': str(e)}), 401
         return f(current_user, *args, **kwargs)
@@ -99,26 +108,42 @@ def login():
         return jsonify({'message': 'Invalid credentials'}), 401
     
     # Generate Token (Simple JWT)
+    # Generate Token (Simple JWT)
+    # Set shorter expiry for testing if needed, keeping 24h
+    exp_time = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
     token = jwt.encode({
         'user_id': user.id,
         'type': user_type,
         'role': user.role if user_type == 'employee' else 'customer',
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+        'exp': exp_time
     }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
-    return jsonify({
-        'token': token,
+    response = jsonify({
+        'message': 'Login successful',
         'user': {
             'id': user.id,
             'name': user.name,
             'email': user.email,
             'role': user.role if user_type == 'employee' else 'customer'
-        }
+        },
+        'exp': exp_time.timestamp() # Send expiry timestamp to client
     })
+    
+    # Set HttpOnly Cookie
+    response.set_cookie('access_token', token, httponly=True, secure=False, samesite='Lax') # secure=True in production
+    
+    return response
 
 @bp.route('/auth/logout', methods=['POST'])
 def logout():
-    return jsonify({'message': 'Logged out successfully'}), 200
+    response = jsonify({'message': 'Logged out successfully'})
+    response.delete_cookie('access_token')
+    return response
+
+@bp.route('/auth/validate', methods=['GET'])
+@token_required
+def validate_token(current_user):
+    return jsonify({'valid': True, 'user': current_user})
 
 # Inventory Management
 @bp.route('/inventory', methods=['GET'])

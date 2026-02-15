@@ -90,11 +90,23 @@
     async function loadMedicines() {
         try {
             const response = await fetch(`${API_URL}/inventory`, { headers: Auth.getHeaders() });
-            const data = await response.json();
-            medicines = data.medicines;
-            renderMedicines(medicines);
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.medicines) {
+                    medicines = data.medicines;
+                    renderMedicines(medicines);
+                } else {
+                    console.error('Invalid data format');
+                    document.getElementById('medicineList').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Invalid data received.</td></tr>';
+                }
+            } else {
+                console.error('Failed to load medicines:', response.status);
+                document.getElementById('medicineList').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Failed to load medicines.</td></tr>';
+            }
         } catch (error) {
             console.error('Error loading medicines', error);
+            document.getElementById('medicineList').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Network error. Please try again.</td></tr>';
         }
     }
 
@@ -103,17 +115,47 @@
         tbody.innerHTML = '';
         list.forEach(med => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${med.name}</td>
-                <td class="${med.stock === 0 ? 'text-danger' : ''}">${med.stock}</td>
-                <td>$${med.price}</td>
-                <td>
-                    <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem;" 
-                        onclick="addToCart(${med.id})" ${med.stock === 0 ? 'disabled' : ''}>
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </td>
-            `;
+            
+            // Name
+            const tdName = document.createElement('td');
+            tdName.textContent = med.name;
+            tr.appendChild(tdName);
+            
+            // Stock
+            const tdStock = document.createElement('td');
+            tdStock.textContent = med.stock;
+            if (med.stock === 0) {
+                tdStock.classList.add('text-danger');
+            }
+            tr.appendChild(tdStock);
+            
+            // Price
+            const tdPrice = document.createElement('td');
+            tdPrice.textContent = `$${Number(med.price).toFixed(2)}`;
+            tr.appendChild(tdPrice);
+            
+            // Action
+            const tdAction = document.createElement('td');
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-secondary';
+            btn.style.padding = '0.25rem 0.5rem';
+            
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-plus';
+            btn.appendChild(icon);
+            
+            if (med.stock === 0) {
+                btn.disabled = true;
+            } else {
+                btn.onclick = function() {
+                    if (typeof med.id === 'number') {
+                        addToCart(med.id);
+                    }
+                };
+            }
+            tdAction.appendChild(btn);
+            tr.appendChild(tdAction);
+            
             tbody.appendChild(tr);
         });
     }
@@ -142,33 +184,68 @@
 
     function renderCart() {
         const container = document.getElementById('cartItems');
+        container.innerHTML = ''; // Clear container safely
+        
         if (cart.length === 0) {
-            container.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 2rem;">No items added</p>';
+            const emptyMsg = document.createElement('p');
+            emptyMsg.style.color = 'var(--text-muted)';
+            emptyMsg.style.textAlign = 'center';
+            emptyMsg.style.marginTop = '2rem';
+            emptyMsg.textContent = 'No items added';
+            container.appendChild(emptyMsg);
+            
             document.getElementById('grandTotal').textContent = '$0.00';
             return;
         }
 
-        let html = '';
         let total = 0;
         
         cart.forEach((item, index) => {
             const itemTotal = item.price * item.quantity;
             total += itemTotal;
-            html += `
-                <div class="flex justify-between items-center" style="margin-bottom: 0.75rem;">
-                    <div>
-                        <div style="font-weight: 500;">${item.name}</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">$${item.price} x ${item.quantity}</div>
-                    </div>
-                    <div>
-                        <span style="font-weight: 600;">$${itemTotal.toFixed(2)}</span>
-                        <i class="fas fa-times" style="color: var(--danger); cursor: pointer; margin-left: 0.5rem;" onclick="removeFromCart(${index})"></i>
-                    </div>
-                </div>
-            `;
+            
+            const row = document.createElement('div');
+            row.className = 'flex justify-between items-center';
+            row.style.marginBottom = '0.75rem';
+            
+            // Left side (Name + Price x Qty)
+            const leftDiv = document.createElement('div');
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.style.fontWeight = '500';
+            nameDiv.textContent = item.name;
+            leftDiv.appendChild(nameDiv);
+            
+            const priceDiv = document.createElement('div');
+            priceDiv.style.fontSize = '0.85rem';
+            priceDiv.style.color = 'var(--text-muted)';
+            priceDiv.textContent = `$${Number(item.price).toFixed(2)} x ${item.quantity}`;
+            leftDiv.appendChild(priceDiv);
+            
+            row.appendChild(leftDiv);
+            
+            // Right side (Total + Delete)
+            const rightDiv = document.createElement('div');
+            
+            const totalSpan = document.createElement('span');
+            totalSpan.style.fontWeight = '600';
+            totalSpan.textContent = `$${itemTotal.toFixed(2)}`;
+            rightDiv.appendChild(totalSpan);
+            
+            const deleteIcon = document.createElement('i');
+            deleteIcon.className = 'fas fa-times';
+            deleteIcon.style.color = 'var(--danger)';
+            deleteIcon.style.cursor = 'pointer';
+            deleteIcon.style.marginLeft = '0.5rem';
+            deleteIcon.onclick = function() {
+                removeFromCart(index);
+            };
+            rightDiv.appendChild(deleteIcon);
+            
+            row.appendChild(rightDiv);
+            container.appendChild(row);
         });
         
-        container.innerHTML = html;
         document.getElementById('grandTotal').textContent = `$${total.toFixed(2)}`;
     }
 

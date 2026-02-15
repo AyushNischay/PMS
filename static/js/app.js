@@ -1,14 +1,32 @@
 
 // Base API URL
-const API_URL = 'http://127.0.0.1:5000';
-
+const API_URL = window.API_URL || '';  // Use relative paths or inject via server-side template
 // Auth State Management
 const Auth = {
-    token: localStorage.getItem('token'),
+    // Token is now HttpOnly cookie, not accessible to JS
     user: JSON.parse(localStorage.getItem('user') || '{}'),
+    exp: localStorage.getItem('token_exp'),
 
     isLoggedIn: function() {
-        return !!this.token;
+        if (!this.exp) return false;
+        // Check if expired
+        const now = Math.floor(Date.now() / 1000);
+        if (now > parseInt(this.exp)) {
+            this.logout();
+            return false;
+        }
+        return true;
+    },
+    
+    // Async check for critical actions or app load
+    validateOptions: async function() {
+        if (!this.isLoggedIn()) return false;
+        try {
+            const response = await fetch(`${API_URL}/auth/validate`);
+            if (response.ok) return true;
+        } catch (e) { console.error(e); }
+        this.logout();
+        return false;
     },
 
     login: async function(email, password) {
@@ -18,48 +36,57 @@ const Auth = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-            const data = await response.json();
+            
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (err) {
+                console.error("Failed to parse JSON", err);
+                const text = await response.text();
+                return { success: false, message: text || 'Invalid server response' };
+            }
             
             if (response.ok) {
-                this.token = data.token;
-                this.user = data.user;
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-                return { success: true };
+                if (data.user && data.exp) {
+                    this.user = data.user;
+                    this.exp = data.exp;
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('token_exp', data.exp);
+                    return { success: true };
+                } else {
+                    return { success: false, message: 'Invalid response structure' };
+                }
             } else {
-                return { success: false, message: data.message };
+                return { success: false, message: data.message || 'Login failed' };
             }
         } catch (error) {
+            console.error('Login error:', error);
             return { success: false, message: 'Network error' };
         }
     },
 
     logout: function() {
-        localStorage.removeItem('token');
+        this.user = {};
+        this.exp = null;
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        localStorage.removeItem('token_exp');
+        
+        // Call backend to clear cookie
+        fetch(`${API_URL}/auth/logout`, { method: 'POST' })
+            .then(() => window.location.href = '/login')
+            .catch(() => window.location.href = '/login');
     },
-
     getHeaders: function() {
-        return {
-            'Authorization': `Bearer ${this.token}`,
-            'Content-Type': 'application/json'
-        };
-    }
-};
+        // Cookies handling auth, so just content type
+        return { 'Content-Type': 'application/json' };
+    }};
 
 // UI Utilities
 const UI = {
     showAlert: function(message, type = 'success') {
-        const div = document.createElement('div');
-        div.className = `alert alert-${type}`;
-        div.textContent = message;
-        // Basic alert styling would be needed in CSS or here
-        // For now just logging
         console.log(`[${type}] ${message}`);
-        alert(message); // Simple fallback
-    }
-};
+        alert(message);  // TODO: Implement proper toast/notification UI
+    }};
 
 // Protect Routes (Simple check)
 function requireAuth() {

@@ -43,17 +43,23 @@
         btn.disabled = true;
         errorMsg.style.display = 'none';
         
-        const result = await Auth.login(email, password);
-        
-        if (result.success) {
-            window.location.href = '/dashboard';
-        } else {
+        try {
+            const result = await Auth.login(email, password);
+            
+            if (result.success) {
+                window.location.href = '/dashboard';
+            } else {
+                btn.textContent = 'Sign In';
+                btn.disabled = false;
+                errorMsg.textContent = result.message || 'Login failed';
+                errorMsg.style.display = 'block';
+            }
+        } catch (err) {
             btn.textContent = 'Sign In';
             btn.disabled = false;
-            errorMsg.textContent = result.message || 'Login failed';
+            errorMsg.textContent = 'An unexpected error occurred. Please try again.';
             errorMsg.style.display = 'block';
-        }
-    });
+        }    });
 
     // If already logged in, redirect
     if (Auth.isLoggedIn()) {
