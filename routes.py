@@ -137,9 +137,8 @@ def login():
 @bp.route('/auth/logout', methods=['POST'])
 def logout():
     response = jsonify({'message': 'Logged out successfully'})
-    response.delete_cookie('access_token')
+    response.delete_cookie('access_token', path='/', samesite='Lax')
     return response
-
 @bp.route('/auth/validate', methods=['GET'])
 @token_required
 def validate_token(current_user):

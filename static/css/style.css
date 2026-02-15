@@ -115,12 +115,15 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
 
-input:focus-visible {
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-}/* Buttons */
-.btn {
+}
+
+/* Buttons */.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;

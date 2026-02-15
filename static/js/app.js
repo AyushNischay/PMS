@@ -11,24 +11,25 @@ const Auth = {
         if (!this.exp) return false;
         // Check if expired
         const now = Math.floor(Date.now() / 1000);
-        if (now > parseInt(this.exp)) {
+        const expTime = parseInt(this.exp, 10);
+        if (isNaN(expTime) || now > expTime) {
             this.logout();
             return false;
         }
         return true;
-    },
-    
+    },    
     // Async check for critical actions or app load
     validateOptions: async function() {
         if (!this.isLoggedIn()) return false;
         try {
-            const response = await fetch(`${API_URL}/auth/validate`);
+            const response = await fetch(`${API_URL}/auth/validate`, {
+                credentials: 'include'
+            });
             if (response.ok) return true;
         } catch (e) { console.error(e); }
         this.logout();
         return false;
     },
-
     login: async function(email, password) {
         try {
             const response = await fetch(`${API_URL}/auth/login`, {

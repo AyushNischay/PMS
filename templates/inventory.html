@@ -128,8 +128,7 @@
                 tdStock.appendChild(stockSpan);
                 
                 const tdPrice = document.createElement('td');
-                tdPrice.textContent = `${med.price}`;
-                
+                tdPrice.textContent = `${med.price.toFixed(2)}`;                
                 const tdExpiry = document.createElement('td');
                 tdExpiry.textContent = med.expiry || '';
                 

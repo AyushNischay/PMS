@@ -148,11 +148,11 @@
                 btn.disabled = true;
             } else {
                 btn.onclick = function() {
-                    if (typeof med.id === 'number') {
-                        addToCart(med.id);
+                    const id = Number(med.id);
+                    if (!isNaN(id)) {
+                        addToCart(id);
                     }
-                };
-            }
+                };            }
             tdAction.appendChild(btn);
             tr.appendChild(tdAction);
             
