@@ -1,0 +1,160 @@
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PMS{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <i class="fas fa-clinic-medical"></i> PMS
+        </div>
+        
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link active">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <a href="/inventory-page" class="nav-link">
+                <i class="fas fa-boxes"></i> Inventory
+            </a>
+            <a href="/sales-page" class="nav-link">
+                <i class="fas fa-cash-register"></i> Sales
+            </a>
+            <a href="#" class="nav-link" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <div>
+                <h2>Dashboard</h2>
+                <p style="color: var(--text-muted);">Welcome back, <span id="userName">User</span></p>
+            </div>
+            <div class="flex gap-4">
+                <button class="btn btn-primary" onclick="window.location.href='/sales-page'">
+                    <i class="fas fa-plus" style="margin-right: 0.5rem;"></i> New Sale
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="card">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">TOTAL SALES TODAY</p>
+                        <h3 style="font-size: 1.8rem; margin-top: 0.5rem;">$1,240</h3>
+                    </div>
+                    <div style="background: #ecfdf5; color: #10b981; padding: 1rem; border-radius: 50%;">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">MEDICINES IN STOCK</p>
+                        <h3 id="totalStock" style="font-size: 1.8rem; margin-top: 0.5rem;">Loading...</h3>
+                    </div>
+                    <div style="background: #eff6ff; color: #3b82f6; padding: 1rem; border-radius: 50%;">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">LOW STOCK ALERTS</p>
+                        <h3 id="lowStockCount" style="font-size: 1.8rem; margin-top: 0.5rem; color: var(--danger);">0</h3>
+                    </div>
+                    <div style="background: #fef2f2; color: #ef4444; padding: 1rem; border-radius: 50%;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity / Low Stock Table -->
+        <div class="card">
+            <h4 style="margin-bottom: 1.5rem;">Low Stock Medicines</h4>
+            <div class="table-container">
+                <table id="lowStockTable">
+                    <thead>
+                        <tr>
+                            <th>Medicine Name</th>
+                            <th>Stock</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" style="text-align: center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    requireAuth();
+    
+    document.getElementById('userName').textContent = Auth.user.name;
+    
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        Auth.logout();
+    });
+
+    async function loadDashboardData() {
+        try {
+            const response = await fetch(`${API_URL}/inventory`, {
+                headers: Auth.getHeaders()
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const medicines = data.medicines;
+                
+                // Calculate stats
+                const totalStock = medicines.reduce((sum, item) => sum + item.stock, 0);
+                const lowStock = medicines.filter(item => item.stock < 10);
+                
+                document.getElementById('totalStock').textContent = totalStock;
+                document.getElementById('lowStockCount').textContent = lowStock.length;
+                
+                // Populate Table
+                const tbody = document.querySelector('#lowStockTable tbody');
+                tbody.innerHTML = '';
+                
+                if (lowStock.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--success);">All stock levels are healthy!</td></tr>';
+                } else {
+                    lowStock.forEach(med => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${med.name}</td>
+                            <td style="font-weight: 600; color: var(--danger);">${med.stock}</td>
+                            <td>$${med.price}</td>
+                            <td><span style="background: #fef2f2; color: #ef4444; padding: 0.25rem 0.5rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600;">Low Stock</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error loading dashboard data', error);
+        }
+    }
+
+    loadDashboardData();
+</script>
+{% endblock %}

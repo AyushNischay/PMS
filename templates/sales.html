@@ -1,0 +1,212 @@
+
+{% extends "base.html" %}
+
+{% block title %}Sales - PMS{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <i class="fas fa-clinic-medical"></i> PMS
+        </div>
+        
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <a href="/inventory-page" class="nav-link">
+                <i class="fas fa-boxes"></i> Inventory
+            </a>
+            <a href="/sales-page" class="nav-link active">
+                <i class="fas fa-cash-register"></i> Sales
+            </a>
+            <a href="#" class="nav-link" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <h2 style="margin-bottom: 2rem;">New Sale</h2>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+            <!-- Product Selection -->
+            <div class="card">
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="searchMedicine" placeholder="Search medicines..." onkeyup="filterMedicines()">
+                </div>
+                
+                <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                    <table id="medicineTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Stock</th>
+                                <th>Price</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="medicineList">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bill Summary -->
+            <div class="card">
+                <h4 style="margin-bottom: 1rem;">Bill Summary</h4>
+                <div id="cartItems" style="margin-bottom: 1.5rem; min-height: 200px;">
+                    <p style="color: var(--text-muted); text-align: center; margin-top: 2rem;">No items added</p>
+                </div>
+                
+                <div style="border-top: 1px solid var(--border); padding-top: 1rem; margin-bottom: 1.5rem;">
+                    <div class="flex justify-between items-center" style="font-size: 1.25rem; font-weight: 700;">
+                        <span>Total</span>
+                        <span id="grandTotal">$0.00</span>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" style="width: 100%;" onclick="processSale()">Complete Sale</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    requireAuth();
+    
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        Auth.logout();
+    });
+
+    let medicines = [];
+    let cart = [];
+
+    async function loadMedicines() {
+        try {
+            const response = await fetch(`${API_URL}/inventory`, { headers: Auth.getHeaders() });
+            const data = await response.json();
+            medicines = data.medicines;
+            renderMedicines(medicines);
+        } catch (error) {
+            console.error('Error loading medicines', error);
+        }
+    }
+
+    function renderMedicines(list) {
+        const tbody = document.getElementById('medicineList');
+        tbody.innerHTML = '';
+        list.forEach(med => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${med.name}</td>
+                <td class="${med.stock === 0 ? 'text-danger' : ''}">${med.stock}</td>
+                <td>$${med.price}</td>
+                <td>
+                    <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem;" 
+                        onclick="addToCart(${med.id})" ${med.stock === 0 ? 'disabled' : ''}>
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filterMedicines() {
+        const query = document.getElementById('searchMedicine').value.toLowerCase();
+        const filtered = medicines.filter(m => m.name.toLowerCase().includes(query));
+        renderMedicines(filtered);
+    }
+
+    function addToCart(id) {
+        const med = medicines.find(m => m.id === id);
+        const existing = cart.find(item => item.id === id);
+        
+        if (existing) {
+            if (existing.quantity < med.stock) {
+                existing.quantity++;
+            } else {
+                alert('Not enough stock!');
+            }
+        } else {
+            cart.push({ ...med, quantity: 1 });
+        }
+        renderCart();
+    }
+
+    function renderCart() {
+        const container = document.getElementById('cartItems');
+        if (cart.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 2rem;">No items added</p>';
+            document.getElementById('grandTotal').textContent = '$0.00';
+            return;
+        }
+
+        let html = '';
+        let total = 0;
+        
+        cart.forEach((item, index) => {
+            const itemTotal = item.price * item.quantity;
+            total += itemTotal;
+            html += `
+                <div class="flex justify-between items-center" style="margin-bottom: 0.75rem;">
+                    <div>
+                        <div style="font-weight: 500;">${item.name}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">$${item.price} x ${item.quantity}</div>
+                    </div>
+                    <div>
+                        <span style="font-weight: 600;">$${itemTotal.toFixed(2)}</span>
+                        <i class="fas fa-times" style="color: var(--danger); cursor: pointer; margin-left: 0.5rem;" onclick="removeFromCart(${index})"></i>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        document.getElementById('grandTotal').textContent = `$${total.toFixed(2)}`;
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        renderCart();
+    }
+
+    async function processSale() {
+        if (cart.length === 0) return alert('Cart is empty');
+        
+        const saleData = {
+            items: cart.map(item => ({ medicine_id: item.id, quantity: item.quantity }))
+        };
+        
+        try {
+            const response = await fetch(`${API_URL}/sales`, {
+                method: 'POST',
+                headers: Auth.getHeaders(),
+                body: JSON.stringify(saleData)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                alert(`Sale successful! Total: $${result.total}`);
+                cart = [];
+                renderCart();
+                loadMedicines(); // Refresh stock
+            } else {
+                alert('Sale failed: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error processing sale', error);
+            alert('Error processing sale');
+        }
+    }
+
+    loadMedicines();
+</script>
+{% endblock %}

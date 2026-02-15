@@ -1,0 +1,190 @@
+
+{% extends "base.html" %}
+
+{% block title %}Inventory - PMS{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <i class="fas fa-clinic-medical"></i> PMS
+        </div>
+        
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <a href="/inventory-page" class="nav-link active">
+                <i class="fas fa-boxes"></i> Inventory
+            </a>
+            <a href="/sales-page" class="nav-link">
+                <i class="fas fa-cash-register"></i> Sales
+            </a>
+            <a href="#" class="nav-link" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <h2>Inventory Management</h2>
+            <button class="btn btn-primary" onclick="openModal('addModal')">
+                <i class="fas fa-plus"></i> Add Medicine
+            </button>
+        </header>
+
+        <div class="card">
+            <div class="table-container">
+                <table id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Stock</th>
+                            <th>Price</th>
+                            <th>Expiry</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="6" style="text-align: center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Add Medicine Modal -->
+<div id="addModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+    <div class="card" style="width: 100%; max-width: 500px; margin: 2rem;">
+        <h3 style="margin-bottom: 1rem;">Add Medicine</h3>
+        <form id="addMedicineForm">
+            <div style="margin-bottom: 1rem;">
+                <label>Name</label>
+                <input type="text" name="name" required>
+            </div>
+            <div class="flex gap-4" style="margin-bottom: 1rem;">
+                <div style="flex: 1;">
+                    <label>Stock</label>
+                    <input type="number" name="stock" required>
+                </div>
+                <div style="flex: 1;">
+                    <label>Price</label>
+                    <input type="number" step="0.01" name="price" required>
+                </div>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <label>Expiry Date</label>
+                <input type="date" name="expiry">
+            </div>
+            <div class="flex justify-between">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Medicine</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    requireAuth();
+    
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        Auth.logout();
+    });
+
+    // Load Inventory
+    async function loadInventory() {
+        try {
+            const response = await fetch(`${API_URL}/inventory`, {
+                headers: Auth.getHeaders()
+            });
+            const data = await response.json();
+            const tbody = document.querySelector('#inventoryTable tbody');
+            tbody.innerHTML = '';
+            
+            data.medicines.forEach(med => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${med.id}</td>
+                    <td style="font-weight: 500;">${med.name}</td>
+                    <td>
+                        <span style="${med.stock < 10 ? 'color: var(--danger); font-weight: bold;' : ''}">
+                            ${med.stock}
+                        </span>
+                    </td>
+                    <td>$${med.price}</td>
+                    <td>${med.expiry}</td>
+                    <td>
+                        <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" onclick="deleteMedicine(${med.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error('Error loading inventory', error);
+        }
+    }
+
+    // Add Medicine
+    document.getElementById('addMedicineForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = {
+            name: formData.get('name'),
+            stock: parseInt(formData.get('stock')),
+            price: parseFloat(formData.get('price')),
+            expiry: formData.get('expiry')
+        };
+        
+        try {
+            const response = await fetch(`${API_URL}/inventory`, {
+                method: 'POST',
+                headers: Auth.getHeaders(),
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                closeModal('addModal');
+                e.target.reset();
+                loadInventory();
+            } else {
+                alert('Failed to add medicine');
+            }
+        } catch (error) {
+            console.error('Error adding medicine', error);
+        }
+    });
+
+    async function deleteMedicine(id) {
+        if (!confirm('Are you sure?')) return;
+        try {
+            const response = await fetch(`${API_URL}/inventory/${id}`, {
+                method: 'DELETE',
+                headers: Auth.getHeaders()
+            });
+            if (response.ok) loadInventory();
+        } catch (error) {
+            console.error('Error deleting medicine', error);
+        }
+    }
+
+    // Modal Utils
+    function openModal(id) {
+        document.getElementById(id).style.display = 'flex';
+    }
+    
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    loadInventory();
+</script>
+{% endblock %}

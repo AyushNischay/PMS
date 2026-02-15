@@ -1,0 +1,63 @@
+
+{% extends "base.html" %}
+
+{% block title %}Login - PMS{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1 style="color: var(--primary);">PMS Login</h1>
+            <p style="color: var(--text-muted);">Pharmacy Management System</p>
+        </div>
+        
+        <form id="loginForm">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email Address</label>
+                <input type="email" id="email" required placeholder="admin@example.com">
+            </div>
+            
+            <div style="margin-bottom: 2rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Password</label>
+                <input type="password" id="password" required placeholder="••••••••">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+        </form>
+        
+        <div id="errorMsg" style="margin-top: 1rem; color: var(--danger); text-align: center; display: none;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const btn = e.target.querySelector('button');
+        const errorMsg = document.getElementById('errorMsg');
+        
+        btn.textContent = 'Signing in...';
+        btn.disabled = true;
+        errorMsg.style.display = 'none';
+        
+        const result = await Auth.login(email, password);
+        
+        if (result.success) {
+            window.location.href = '/dashboard';
+        } else {
+            btn.textContent = 'Sign In';
+            btn.disabled = false;
+            errorMsg.textContent = result.message || 'Login failed';
+            errorMsg.style.display = 'block';
+        }
+    });
+
+    // If already logged in, redirect
+    if (Auth.isLoggedIn()) {
+        window.location.href = '/dashboard';
+    }
+</script>
+{% endblock %}

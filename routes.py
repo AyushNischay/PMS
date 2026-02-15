@@ -1,5 +1,5 @@
 
-from flask import request, jsonify, session, Blueprint, current_app
+from flask import request, jsonify, session, Blueprint, current_app, render_template
 from extensions import db
 from models import Customer, Employee, Medicine, SalesTransaction, SalesDetail, InventoryUpdate, Supplier
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,6 +9,27 @@ import os
 from functools import wraps
 
 bp = Blueprint('main', __name__)
+
+# HTML Routes
+@bp.route('/')
+def home():
+    return render_template('login.html')
+
+@bp.route('/login')
+def login_page():
+    return render_template('login.html')
+
+@bp.route('/dashboard')
+def dashboard_page():
+    return render_template('dashboard.html')
+
+@bp.route('/inventory-page')
+def inventory_page():
+    return render_template('inventory.html')
+
+@bp.route('/sales-page')
+def sales_page():
+    return render_template('sales.html')
 
 def token_required(f):
     @wraps(f)
