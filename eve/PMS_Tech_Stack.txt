@@ -1,0 +1,45 @@
+Technology Stack Recommendation Document
+Pharmacy Management System (PMS)
+Flask with vanilla HTML/CSS/JavaScript is the simplest and most suitable technology stack 
+for building a basic Pharmacy Management System. This stack is proven effective for quick 
+CRUD applications integrated with MySQL.
+1. Recommended Stack
+Backend: Python + Flask + SQLAlchemy
+- Lightweight API framework 
+- Easy ORM integration with MySQL for CRUD operations 
+- Handles authentication and stock logic efficiently
+Frontend: HTML5 + CSS3 + Vanilla JavaScript
+- No heavy frontend frameworks required 
+- Simple responsive UI design 
+- Real-time updates using fetch API (AJAX)
+Database: MySQL
+- Relational database matching 3NF schema 
+- Supports triggers and referential integrity 
+- Suitable for structured pharmacy data
+Optional Libraries
+- DataTables.js: Enhanced table sorting and searching 
+- Chart.js: Basic reporting charts and visualization 
+- Compatible with vanilla JavaScript
+Deployment Options
+- Local development using Flask dev server 
+- Cloud hosting via Render or Heroku for prototype deployment
+2. Setup Steps
+Step 1: Install Dependencies
+pip install flask flask-sqlalchemy flask-cors pymysql
+Step 2: Backend Development
+- Create Flask application 
+- Implement API endpoints such as: 
+  • /api/medicines 
+  • /api/sales 
+- Connect MySQL using SQLAlchemy ORM
+Step 3: Frontend Development
+- Create static HTML, CSS, and JS files 
+- Use fetch() to call backend APIs 
+- Display dynamic data in tables and forms
+Step 4: Run the Application
+- Start backend server: flask run 
+- Open index.html in browser 
+- Test CRUD operations
+Conclusion
+This tech stack ensures simplicity, maintainability, and suitability for a database-focused 
+Pharmacy Management System while keeping development complexity low.

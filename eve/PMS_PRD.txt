@@ -1,0 +1,137 @@
+Product Requirements Document (PRD)
+Product Name: Pharmacy Management System (PMS)
+1. Product Overview
+1.1 Purpose
+The Pharmacy Management System (PMS) is a simple database-driven application to 
+digitize pharmacy operations. It handles inventory, sales, suppliers, customers, and basic 
+reports using: 
+- Python (backend logic & API) 
+- HTML/CSS/JavaScript (web UI) 
+- MySQL (database)
+1.2 Problem Statement
+Manual systems cause billing errors, stock mismatches, expired medicine waste, data 
+duplication, and poor supplier/customer tracking. PMS resolves these issues through real-
+time stock control, automated updates, and a normalized database.
+1.3 Target Users
+Primary Users: 
+- Pharmacists 
+- Store Managers 
+- Pharmacy Staff 
+ 
+Secondary Users: 
+- Customers (basic order viewing)
+2. Product Goals
+- Digitize operations accurately 
+- Track inventory in real-time 
+- Automate billing and stock updates 
+- Reduce human errors 
+- Enforce data integrity 
+- Generate reports 
+- Secure logins
+3. Core Features
+3.1 Inventory Management
+- Add, update, delete medicines 
+- Track stock and expiry dates 
+- Low-stock alerts 
+- Auto-update stock on sales/restocking 
+- Rules: No negative stock; flag expired items
+3.2 Sales & Billing
+- Create sales with multiple medicines 
+- Link to customer and employee 
+- Auto-calculate totals 
+- Check stock before sale; reduce on success
+3.3 Customer Management
+- Register and update customers 
+- Password login (hashed) 
+- View purchase history
+3.4 Supplier Management
+- Add, update, delete suppliers 
+- Link suppliers to restocking operations
+3.5 Employee Management
+- Add employees with roles and salaries 
+- Link employees to sales and restocking
+3.6 Reporting
+- Sales by date 
+- Top medicines 
+- Stock level, low-stock, expiry alerts 
+- Customer summaries
+3.7 Authentication
+- Admin and customer login 
+- SHA-256 password hashing 
+- Basic role access control
+3.8 User Interface
+Frontend built using HTML, CSS, and JavaScript: 
+- Fixed sidebar navigation (Inventory, Sales, Reports, Login) 
+- Responsive grid/table layout (Flexbox/Grid) 
+- Forms with input fields, dropdowns, date pickers 
+- Sortable tables (optional DataTables.js) 
+- Action buttons with hover effects 
+- Color-coded alerts (red for low stock, green for success) 
+- Mobile responsive using media queries 
+- Vanilla JS implementation
+4. System Requirements
+4.1 Functional Requirements
+- Full CRUD on all entities 
+- Primary and foreign key enforcement 
+- Stock validation triggers 
+- ACID-compliant transactions
+4.2 Non-Functional Requirements
+Performance: 
+- Fast queries (<1 second) 
+- Real-time updates via AJAX 
+ 
+Security: 
+- Hashed passwords 
+- Role-based access 
+- HTTPS in production 
+ 
+Reliability: 
+- Transaction logging 
+- Basic concurrency control 
+ 
+Scalability: 
+- Modular database design
+5. Data Model
+The system contains 7 normalized entities in 3NF: 
+- Medicines 
+- Customers 
+- Employees 
+- Suppliers 
+- SalesTransactions 
+- SalesDetails 
+- InventoryUpdates 
+(ER diagram to be included separately.)
+6. User Workflows
+Admin Workflow: 
+Login ? Manage inventory/sales ? Run reports 
+ 
+Customer Workflow: 
+Register/Login ? View order history
+7. Tech Stack Summary
+- Backend: Python (Flask/FastAPI) with SQLAlchemy or PyMySQL 
+- Frontend: HTML/CSS/JavaScript (Vanilla + optional DataTables.js) 
+- Database: MySQL 
+- Communication: AJAX/fetch API calls 
+- Deployment: Python backend (localhost:5000) serving frontend
+8. Future Enhancements
+- Barcode scanning 
+- Email alerts 
+- Basic online ordering
+9. Success Metrics & Testing
+- 95%+ stock accuracy 
+- Billing time under 1 minute 
+- Zero negative stock errors 
+- Testing via manual DB checks and browser testing
+10. Assumptions & Risks
+Assumptions: 
+- Basic web server setup 
+- Knowledge of Python and JavaScript 
+ 
+Risks: 
+- CORS issues (mitigate using Flask-CORS) 
+- Browser compatibility (test on Chrome and Firefox)
+Executive Summary
+The Pharmacy Management System (PMS) is a simple web-based application for accurate 
+pharmacy management using an HTML/CSS/JavaScript frontend and a Python/MySQL 
+backend. It focuses on real-time inventory tracking, automated sales processing, and 
+structured reporting.

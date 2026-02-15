@@ -1,0 +1,99 @@
+UI/UX Design Document
+Pharmacy Management System (PMS)
+1. Design Overview
+The Pharmacy Management System follows a modern dark admin dashboard design system. 
+It emphasizes high readability, clean layout structure, and efficient workflow management.
+Key Characteristics:
+- Dark theme base 
+- Card-based UI components 
+- Grid layout structure 
+- Icon-driven navigation 
+- Rounded corners and soft shadows
+2. Layout Structure
+Global Layout Architecture:
+1. Left Sidebar Navigation (fixed, collapsible) 
+2. Top Header Bar (search, notifications, profile) 
+3. Main Content Area (cards, tables, charts)
+3. Design System
+Typography:
+- Geometric sans-serif font (e.g., TT Commons) 
+- Clear hierarchy (H1, H2, H3, Body) 
+- High readability in dark mode
+Color System:
+Primary Colors: 
+- Blue (#5065F0) – Active states 
+- Green (#2EB95E) – Success indicators 
+- Yellow (#FFDB45) – Warnings 
+- Red (#F04689) – Alerts 
+ 
+Neutral Colors: 
+- Dark background 
+- Light gray content text 
+- Muted labels 
+
+4. Core Screens
+Dashboard:
+- KPI summary cards 
+- Expiring medicine list 
+- Recent orders panel 
+- Monthly progress bar chart 
+- Donut chart for daily report
+Point of Sale (POS):
+- Category tabs 
+- Product grid with image cards 
+- Live cart summary panel 
+- Payment breakdown and save button
+Employee Module:
+- Add Employee form 
+- Card-based employee list 
+- Salary setup page
+Product Management:
+- Table with sorting/filtering 
+- Export functionality 
+- Add Product button
+Sales Information:
+- Date/customer filters 
+- Search bar 
+- Sales data table with actions
+5. UI Components Library
+- Primary/Success/Danger buttons 
+- Shadowed cards with padding 
+- Styled tables with hover effects 
+- Rounded form inputs and dropdowns 
+- Status badges (Active, Delivered, Cancelled)
+6. Interaction Design
+- Hover states on buttons 
+- Sidebar active highlight 
+- Smooth transitions 
+- Success and error alerts
+7. Responsiveness
+Designed desktop-first with mobile adaptability: 
+- Sidebar collapses on small screens 
+- Cards stack vertically 
+- Tables become horizontally scrollable
+8. Accessibility Considerations
+- High contrast colors 
+- Clear readable fonts 
+- Consistent spacing and layout
+9. Frontend Implementation Notes
+Recommended Stack: 
+- HTML5 
+- CSS3 (Flexbox/Grid) 
+- CSS Variables 
+- Vanilla JavaScript 
+- Chart.js 
+- DataTables.js (optional)
+10. Design Strengths
+- Modern SaaS-style interface 
+- Strong dashboard analytics 
+- Efficient POS workflow 
+- Clean grid and card system
+11. Suggested Improvements
+- Add light mode toggle 
+- Add keyboard shortcuts for POS 
+- Add loading animations 
+- Real-time stock notifications
+Executive Summary
+The Pharmacy Management System UI design is a scalable, professional admin dashboard 
+optimized for inventory control, fast POS operations, employee management, and analytics 
+reporting.
