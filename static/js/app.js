@@ -77,6 +77,35 @@ const Auth = {
             .then(() => window.location.href = '/login')
             .catch(() => window.location.href = '/login');
     },
+    register: async function(name, email, password, role = null, extra = {}) {
+        try {
+            const body = { name, email, password, ...extra };
+            if (role) body.role = role;
+            
+            const response = await fetch(`${API_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (err) {
+                const text = await response.text();
+                return { success: false, message: text || 'Invalid server response' };
+            }
+            
+            if (response.ok) {
+                return { success: true, message: data.message };
+            } else {
+                return { success: false, message: data.message || 'Registration failed' };
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            return { success: false, message: 'Network error' };
+        }
+    },
     getHeaders: function() {
         // Cookies handling auth, so just content type
         return { 'Content-Type': 'application/json' };

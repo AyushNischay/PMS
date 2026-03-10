@@ -11,7 +11,7 @@
         </div>
         
         <div class="nav-links">
-            <a href="/dashboard" class="nav-link">
+            <a href="#" class="nav-link" id="dashboardLink">
                 <i class="fas fa-chart-line"></i> Dashboard
             </a>
             <a href="/inventory-page" class="nav-link">
@@ -56,7 +56,18 @@
             <!-- Bill Summary -->
             <div class="card">
                 <h4 style="margin-bottom: 1rem;">Bill Summary</h4>
-                <div id="cartItems" style="margin-bottom: 1.5rem; min-height: 200px;">
+                
+                <div id="customerInfo" style="margin-bottom: 1.5rem; padding: 1rem; border: 1px solid var(--border); border-radius: 8px;">
+                    <h5 style="margin-bottom: 0.75rem;"><i class="fas fa-user"></i> Customer Details</h5>
+                    <div style="margin-bottom: 0.75rem;">
+                        <input type="text" id="custName" placeholder="Full Name" style="width: 100%; margin-bottom: 0.5rem; padding: 0.5rem;">
+                        <input type="email" id="custEmail" placeholder="Email (Unique)" style="width: 100%; margin-bottom: 0.5rem; padding: 0.5rem;">
+                        <input type="text" id="custContact" placeholder="Contact Number" style="width: 100%; padding: 0.5rem;">
+                        <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">Email will be used to track or create customer profile.</p>
+                    </div>
+                </div>
+
+                <div id="cartItems" style="margin-bottom: 1.5rem; min-height: 100px;">
                     <p style="color: var(--text-muted); text-align: center; margin-top: 2rem;">No items added</p>
                 </div>
                 
@@ -79,6 +90,13 @@
 <script>
     requireAuth();
     
+    // Role-based UI
+    const isAdmin = Auth.user?.role === 'Admin';
+    document.getElementById('dashboardLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = isAdmin ? '/dashboard' : '/employee-dashboard';
+    });
+
     document.getElementById('logoutBtn').addEventListener('click', (e) => {
         e.preventDefault();
         Auth.logout();
@@ -257,7 +275,16 @@
     async function processSale() {
         if (cart.length === 0) return alert('Cart is empty');
         
+        const custName = document.getElementById('custName').value;
+        const custEmail = document.getElementById('custEmail').value;
+        const custContact = document.getElementById('custContact').value;
+
+        if (!custEmail) return alert('Customer email is required to associate or create a profile.');
+
         const saleData = {
+            customer_name: custName,
+            customer_email: custEmail,
+            customer_contact: custContact,
             items: cart.map(item => ({ medicine_id: item.id, quantity: item.quantity }))
         };
         

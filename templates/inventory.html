@@ -11,7 +11,7 @@
         </div>
         
         <div class="nav-links">
-            <a href="/dashboard" class="nav-link">
+            <a href="#" class="nav-link" id="dashboardLink">
                 <i class="fas fa-chart-line"></i> Dashboard
             </a>
             <a href="/inventory-page" class="nav-link active">
@@ -29,7 +29,7 @@
     <main class="main-content">
         <header class="flex justify-between items-center" style="margin-bottom: 2rem;">
             <h2>Inventory Management</h2>
-            <button class="btn btn-primary" onclick="openModal('addModal')">
+            <button id="addMedicineBtn" class="btn btn-primary" onclick="openModal('addModal')" style="display: none;">
                 <i class="fas fa-plus"></i> Add Medicine
             </button>
         </header>
@@ -92,6 +92,17 @@
 <script>
     requireAuth();
     
+    // Role-based UI
+    const isAdmin = Auth.user?.role === 'Admin';
+    if (isAdmin) {
+        document.getElementById('addMedicineBtn').style.display = 'block';
+    }
+    
+    document.getElementById('dashboardLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = isAdmin ? '/dashboard' : '/employee-dashboard';
+    });
+
     document.getElementById('logoutBtn').addEventListener('click', (e) => {
         e.preventDefault();
         Auth.logout();
@@ -132,15 +143,22 @@
                 const tdExpiry = document.createElement('td');
                 tdExpiry.textContent = med.expiry || '';
                 
-                const tdActions = document.createElement('td');
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn btn-secondary';
-                deleteBtn.style.cssText = 'padding: 0.25rem 0.5rem; font-size: 0.85rem;';
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                deleteBtn.addEventListener('click', () => deleteMedicine(med.id));
-                tdActions.appendChild(deleteBtn);
+                tr.append(tdId, tdName, tdStock, tdPrice, tdExpiry);
+
+                if (isAdmin) {
+                    const tdActions = document.createElement('td');
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-secondary';
+                    deleteBtn.style.cssText = 'padding: 0.25rem 0.5rem; font-size: 0.85rem;';
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.addEventListener('click', () => deleteMedicine(med.id));
+                    tdActions.appendChild(deleteBtn);
+                    tr.appendChild(tdActions);
+                } else {
+                    // Hide Actions header if not admin
+                    document.querySelector('#inventoryTable thead th:last-child').style.display = 'none';
+                }
                 
-                tr.append(tdId, tdName, tdStock, tdPrice, tdExpiry, tdActions);
                 tbody.appendChild(tr);
             });
         } catch (error) {

@@ -37,9 +37,11 @@ class SalesTransaction(db.Model):
     __tablename__ = 'sales_transactions'
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
     date = db.Column(db.DateTime, default=datetime.utcnow)
     total_amount = db.Column(db.Float, default=0.0)
     
+    employee = db.relationship('Employee', backref='sales')
     details = db.relationship('SalesDetail', backref='transaction', lazy=True)
 
 class SalesDetail(db.Model):

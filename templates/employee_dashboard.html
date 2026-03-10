@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Dashboard - PMS{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-logo">
+            <i class="fas fa-clinic-medical"></i> PMS
+        </div>
+        
+        <div class="nav-links">
+            <a href="/employee-dashboard" class="nav-link active">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <a href="/inventory-page" class="nav-link">
+                <i class="fas fa-boxes"></i> Inventory
+            </a>
+            <a href="/sales-page" class="nav-link">
+                <i class="fas fa-cash-register"></i> Sales
+            </a>
+            <a href="#" class="nav-link" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <div>
+                <h2>Employee Dashboard</h2>
+                <p style="color: var(--text-muted);">Welcome, <span id="userName">Employee</span></p>
+            </div>
+            <div class="flex gap-4">
+                <button class="btn btn-primary" onclick="window.location.href='/sales-page'">
+                    <i class="fas fa-plus" style="margin-right: 0.5rem;"></i> New Sale
+                </button>
+            </div>
+        </header>
+
+        <div class="card">
+            <h4>Inventory Overview</h4>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Quick view of items that might need attention.</p>
+            <div class="table-container">
+                <table id="inventoryOverviewTable">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="3" style="text-align: center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    requireAuth();
+    if (Auth.user?.role === 'Admin') {
+        window.location.href = '/dashboard';
+    }
+
+    document.getElementById('userName').textContent = Auth.user?.name || 'Employee';
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        Auth.logout();
+    });
+
+    async function loadInventoryOverview() {
+        try {
+            const response = await fetch(`${API_URL}/inventory`, {
+                headers: Auth.getHeaders()
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const tbody = document.querySelector('#inventoryOverviewTable tbody');
+                tbody.innerHTML = '';
+                
+                data.medicines.slice(0, 5).forEach(med => {
+                    const tr = document.createElement('tr');
+                    const status = med.stock < 10 ? 'Low Stock' : 'Healthy';
+                    const statusColor = med.stock < 10 ? 'var(--danger)' : 'var(--success)';
+                    tr.innerHTML = `
+                        <td>${med.name}</td>
+                        <td style="font-weight: 600;">${med.stock}</td>
+                        <td><span style="color: ${statusColor}; font-weight: 600;">${status}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading inventory', error);
+        }
+    }
+    loadInventoryOverview();
+</script>
+{% endblock %}

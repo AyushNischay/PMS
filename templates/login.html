@@ -11,7 +11,34 @@
             <p style="color: var(--text-muted);">Pharmacy Management System</p>
         </div>
         
-        <form id="loginForm">
+        <div id="authTabs" style="display: flex; margin-bottom: 2rem; border-bottom: 1px solid var(--border); gap: 1rem;">
+            <button id="showSignIn" class="tab-btn active" style="flex: 1; padding: 0.75rem; border: none; background: none; cursor: pointer; border-bottom: 2px solid var(--primary); font-weight: 600;">Sign In</button>
+            <button id="showSignUp" class="tab-btn" style="flex: 1; padding: 0.75rem; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 600; color: var(--text-muted);">Sign Up</button>
+        </div>
+        
+        <form id="authForm">
+            <div id="nameGroup" style="margin-bottom: 1rem; display: none;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Full Name</label>
+                <input type="text" id="name" placeholder="John Doe">
+            </div>
+
+            <div id="typeGroup" style="margin-bottom: 1rem; display: none;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Register As</label>
+                <select id="userType" onchange="toggleRoleSelect()" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: white;">
+                    <option value="customer">Customer</option>
+                    <option value="staff">Staff (Employee/Admin)</option>
+                </select>
+            </div>
+
+            <div id="roleGroup" style="margin-bottom: 1rem; display: none;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Staff Role</label>
+                <select id="role" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: white;">
+                    <option value="Pharmacist">Pharmacist</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Admin">Admin</option>
+                </select>
+            </div>
+
             <div style="margin-bottom: 1rem;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email Address</label>
                 <input type="email" id="email" required placeholder="admin@example.com">
@@ -22,44 +49,112 @@
                 <input type="password" id="password" required placeholder="••••••••">
             </div>
             
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+            <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%;">Sign In</button>
         </form>
         
         <div id="errorMsg" style="margin-top: 1rem; color: var(--danger); text-align: center; display: none;"></div>
+        <div id="successMsg" style="margin-top: 1rem; color: var(--success); text-align: center; display: none;"></div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    let mode = 'signin';
+    const authForm = document.getElementById('authForm');
+    const nameGroup = document.getElementById('nameGroup');
+    const typeGroup = document.getElementById('typeGroup');
+    const roleGroup = document.getElementById('roleGroup');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const successMsg = document.getElementById('successMsg');
+    const showSignIn = document.getElementById('showSignIn');
+    const showSignUp = document.getElementById('showSignUp');
+
+    function toggleRoleSelect() {
+        const type = document.getElementById('userType').value;
+        roleGroup.style.display = type === 'staff' ? 'block' : 'none';
+    }
+    window.toggleRoleSelect = toggleRoleSelect;
+
+    showSignIn.addEventListener('click', () => {
+        mode = 'signin';
+        nameGroup.style.display = 'none';
+        typeGroup.style.display = 'none';
+        roleGroup.style.display = 'none';
+        submitBtn.textContent = 'Sign In';
+        showSignIn.style.borderBottomColor = 'var(--primary)';
+        showSignIn.style.color = 'inherit';
+        showSignUp.style.borderBottomColor = 'transparent';
+        showSignUp.style.color = 'var(--text-muted)';
+        errorMsg.style.display = 'none';
+        successMsg.style.display = 'none';
+    });
+
+    showSignUp.addEventListener('click', () => {
+        mode = 'signup';
+        nameGroup.style.display = 'block';
+        typeGroup.style.display = 'block';
+        toggleRoleSelect();
+        submitBtn.textContent = 'Create Account';
+        showSignUp.style.borderBottomColor = 'var(--primary)';
+        showSignUp.style.color = 'inherit';
+        showSignIn.style.borderBottomColor = 'transparent';
+        showSignIn.style.color = 'var(--text-muted)';
+        errorMsg.style.display = 'none';
+        successMsg.style.display = 'none';
+    });
+
+    authForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-        const btn = e.target.querySelector('button');
-        const errorMsg = document.getElementById('errorMsg');
+        const name = document.getElementById('name').value;
         
-        btn.textContent = 'Signing in...';
-        btn.disabled = true;
+        submitBtn.textContent = mode === 'signin' ? 'Signing in...' : 'Creating account...';
+        submitBtn.disabled = true;
         errorMsg.style.display = 'none';
+        successMsg.style.display = 'none';
         
         try {
-            const result = await Auth.login(email, password);
-            
-            if (result.success) {
-                window.location.href = '/dashboard';
+            if (mode === 'signin') {
+                const result = await Auth.login(email, password);
+                if (result.success) {
+                    if (Auth.user?.role === 'Admin') {
+                        window.location.href = '/dashboard';
+                    } else if (Auth.user?.role === 'customer') {
+                        window.location.href = '/'; // Or a customer portal if exists
+                    } else {
+                        window.location.href = '/employee-dashboard';
+                    }
+                } else {
+                    errorMsg.textContent = result.message || 'Login failed';
+                    errorMsg.style.display = 'block';
+                }
             } else {
-                btn.textContent = 'Sign In';
-                btn.disabled = false;
-                errorMsg.textContent = result.message || 'Login failed';
-                errorMsg.style.display = 'block';
+                const userType = document.getElementById('userType').value;
+                const role = userType === 'staff' ? document.getElementById('role').value : null;
+                
+                const result = await Auth.register(name, email, password, role);
+                if (result.success) {
+                    successMsg.textContent = 'Registration successful! You can now sign in.';
+                    successMsg.style.display = 'block';
+                    setTimeout(() => showSignIn.click(), 2000);
+                } else {
+                    errorMsg.textContent = result.message || 'Registration failed';
+                    errorMsg.style.display = 'block';
+                }
             }
         } catch (err) {
-            btn.textContent = 'Sign In';
-            btn.disabled = false;
             errorMsg.textContent = 'An unexpected error occurred. Please try again.';
             errorMsg.style.display = 'block';
-        }    });
+        } finally {
+            submitBtn.disabled = false;
+            if (!successMsg.style.display || successMsg.style.display === 'none') {
+                submitBtn.textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
+            }
+        }
+    });
 
     // If already logged in, redirect
     if (Auth.isLoggedIn()) {

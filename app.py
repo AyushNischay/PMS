@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from extensions import db, migrate
 from routes import bp
+from reports import reports_bp
 
 load_dotenv()
 
@@ -19,6 +20,7 @@ def create_app():
     CORS(app)
 
     app.register_blueprint(bp)
+    app.register_blueprint(reports_bp)
     
     return app
 

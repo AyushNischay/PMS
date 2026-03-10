@@ -23,6 +23,10 @@ def login_page():
 def dashboard_page():
     return render_template('dashboard.html')
 
+@bp.route('/employee-dashboard')
+def employee_dashboard_page():
+    return render_template('employee_dashboard.html')
+
 @bp.route('/inventory-page')
 def inventory_page():
     return render_template('inventory.html')
@@ -78,13 +82,13 @@ def register():
     else:
         # Check if customer exists
         if Customer.query.filter_by(email=email).first():
-             return jsonify({'message': 'Customer already exists'}), 409
+             return jsonify({'message': 'Email already registered'}), 409
         new_user = Customer(name=name, email=email, password=hashed_password, contact=data.get('contact'))
 
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({'message': 'User created successfully'}), 201
+    return jsonify({'message': 'Registration successful'}), 201
 
 @bp.route('/auth/login', methods=['POST'])
 def login():
@@ -228,20 +232,89 @@ def delete_medicine(current_user, id):
     db.session.commit()
     return jsonify({'message': 'Medicine deleted successfully'})
 
-# Sales & Billing
+@bp.route('/sales', methods=['GET'])
+@token_required
+def get_sales(current_user):
+    if current_user['role'] not in ['Admin', 'Manager']:
+        return jsonify({'message': 'Permission denied'}), 403
+
+    from_date = request.args.get('from')
+    to_date = request.args.get('to')
+
+    query = SalesTransaction.query
+
+    if from_date:
+        try:
+            from_dt = datetime.datetime.strptime(from_date, '%Y-%m-%d')
+            query = query.filter(SalesTransaction.date >= from_dt)
+        except ValueError:
+            return jsonify({'message': 'Invalid from date format. Use YYYY-MM-DD'}), 400
+
+    if to_date:
+        try:
+            # Include entire day for to_date
+            to_dt = datetime.datetime.strptime(to_date, '%Y-%m-%d') + datetime.timedelta(days=1)
+            query = query.filter(SalesTransaction.date < to_dt)
+        except ValueError:
+            return jsonify({'message': 'Invalid to date format. Use YYYY-MM-DD'}), 400
+
+    sales = query.order_by(SalesTransaction.date.desc()).all()
+    
+    output = []
+    for sale in sales:
+        customer = Customer.query.get(sale.customer_id)
+        employee_name = None
+        if sale.employee_id:
+            employee = Employee.query.get(sale.employee_id)
+            if employee:
+                employee_name = f"{employee.name} ({employee.role})"
+                
+        output.append({
+            'id': sale.id,
+            'date': sale.date.isoformat(),
+            'total_amount': sale.total_amount,
+            'customer_name': customer.name if customer else "Unknown",
+            'customer_email': customer.email if customer else "Unknown",
+            'employee_name': employee_name
+        })
+
+    return jsonify({'sales': output})
+
 @bp.route('/sales', methods=['POST'])
 @token_required
 def create_sale(current_user):
     data = request.json
-    customer_id = data.get('customer_id') # Optional
     items = data.get('items') # List of {medicine_id, quantity}
     
+    cust_name = data.get('customer_name')
+    cust_email = data.get('customer_email')
+    cust_contact = data.get('customer_contact')
+
     if not items:
          return jsonify({'message': 'No items in sale'}), 400
 
+    if not cust_email:
+        return jsonify({'message': 'Customer email is required'}), 400
+
     try:
+        # 1. Handle Customer (Find or Create)
+        customer = Customer.query.filter_by(email=cust_email).first()
+        if not customer:
+            # Create a simple customer entry
+            # Note: We need a placeholder password since it's nullable=False in models.py
+            dummy_pass = generate_password_hash('pms_temp_123', method='scrypt')
+            customer = Customer(
+                name=cust_name or "Walk-in Customer",
+                email=cust_email,
+                password=dummy_pass,
+                contact=cust_contact
+            )
+            db.session.add(customer)
+            db.session.flush() # Get ID
+        
         total_amount = 0
-        sale = SalesTransaction(customer_id=customer_id, date=datetime.datetime.utcnow())
+        employee_id = current_user['id'] if current_user.get('type') == 'employee' else None
+        sale = SalesTransaction(customer_id=customer.id, employee_id=employee_id, date=datetime.datetime.utcnow())
         db.session.add(sale)
         db.session.flush() # Get sale ID
 
@@ -315,6 +388,48 @@ def add_customer(current_user):
     db.session.commit()
     return jsonify({'message': 'Customer created successfully'}), 201
 
+@bp.route('/customers/<int:id>/history', methods=['GET'])
+@token_required
+def get_customer_history(current_user, id):
+    # Allow if Admin/Manager OR if it's the customer requesting their own history
+    if current_user['role'] not in ['Admin', 'Manager']:
+        if current_user.get('type') != 'customer' or current_user['id'] != id:
+            return jsonify({'message': 'Permission denied'}), 403
+            
+    customer = Customer.query.get(id)
+    if not customer:
+        return jsonify({'message': 'Customer not found'}), 404
+        
+    transactions = SalesTransaction.query.filter_by(customer_id=id).order_by(SalesTransaction.date.desc()).all()
+    
+    total_spent = 0
+    txn_list = []
+    
+    for txn in transactions:
+        total_spent += txn.total_amount
+        items = []
+        for detail in txn.details:
+            medicine = Medicine.query.get(detail.medicine_id)
+            items.append({
+                'medicine': medicine.name if medicine else "Unknown Medicine",
+                'quantity': detail.quantity,
+                'price': detail.price
+            })
+            
+        txn_list.append({
+            'id': txn.id,
+            'date': txn.date.isoformat(),
+            'total_amount': txn.total_amount,
+            'items': items
+        })
+        
+    return jsonify({
+        'customer_id': customer.id,
+        'customer_name': customer.name,
+        'total_spent': total_spent,
+        'transactions': txn_list
+    })
+
 # Employees
 @bp.route('/employees', methods=['GET'])
 @token_required
@@ -333,26 +448,41 @@ def get_employees(current_user):
         })
     return jsonify(output)
 
-@bp.route('/employees', methods=['POST'])
+@bp.route('/employees/<int:id>', methods=['PUT'])
 @token_required
-def add_employee(current_user):
+def update_employee(current_user, id):
     if current_user['role'] != 'Admin':
         return jsonify({'message': 'Permission denied'}), 403
-    data = request.json
-    if Employee.query.filter_by(email=data['email']).first():
-        return jsonify({'message': 'Employee already exists'}), 409
     
-    hashed_password = generate_password_hash(data['password'], method='scrypt')
-    new_employee = Employee(
-        name=data['name'], 
-        email=data['email'], 
-        password=hashed_password, 
-        role=data['role'], 
-        salary=data.get('salary')
-    )
-    db.session.add(new_employee)
+    employee = Employee.query.get(id)
+    if not employee:
+        return jsonify({'message': 'Employee not found'}), 404
+        
+    data = request.json
+    employee.name = data.get('name', employee.name)
+    employee.email = data.get('email', employee.email)
+    employee.role = data.get('role', employee.role)
+    employee.salary = data.get('salary', employee.salary)
+    
+    if data.get('password'):
+        employee.password = generate_password_hash(data['password'], method='scrypt')
+        
     db.session.commit()
-    return jsonify({'message': 'Employee created successfully'}), 201
+    return jsonify({'message': 'Employee updated successfully'})
+
+@bp.route('/employees/<int:id>', methods=['DELETE'])
+@token_required
+def delete_employee(current_user, id):
+    if current_user['role'] != 'Admin':
+        return jsonify({'message': 'Permission denied'}), 403
+        
+    employee = Employee.query.get(id)
+    if not employee:
+        return jsonify({'message': 'Employee not found'}), 404
+        
+    db.session.delete(employee)
+    db.session.commit()
+    return jsonify({'message': 'Employee deleted successfully'})
 
 # Suppliers
 @bp.route('/suppliers', methods=['GET'])
@@ -374,3 +504,34 @@ def add_supplier(current_user):
     db.session.add(new_supplier)
     db.session.commit()
     return jsonify({'message': 'Supplier created successfully'}), 201
+
+@bp.route('/suppliers/<int:id>', methods=['PUT'])
+@token_required
+def update_supplier(current_user, id):
+    if current_user['role'] not in ['Admin', 'Manager']:
+        return jsonify({'message': 'Permission denied'}), 403
+        
+    supplier = Supplier.query.get(id)
+    if not supplier:
+        return jsonify({'message': 'Supplier not found'}), 404
+        
+    data = request.json
+    supplier.name = data.get('name', supplier.name)
+    supplier.contact = data.get('contact', supplier.contact)
+    
+    db.session.commit()
+    return jsonify({'message': 'Supplier updated successfully'})
+
+@bp.route('/suppliers/<int:id>', methods=['DELETE'])
+@token_required
+def delete_supplier(current_user, id):
+    if current_user['role'] not in ['Admin', 'Manager']:
+        return jsonify({'message': 'Permission denied'}), 403
+        
+    supplier = Supplier.query.get(id)
+    if not supplier:
+        return jsonify({'message': 'Supplier not found'}), 404
+        
+    db.session.delete(supplier)
+    db.session.commit()
+    return jsonify({'message': 'Supplier deleted successfully'})
